@@ -1,8 +1,8 @@
 # CS5760 Natural Language Processing - Homework 1
 
-**Name:** Veerendra Bellapukonda
-**StudentId:** 700772385
-**Course:** CS5760 Natural Language Processing
+- **Name:** Veerendra Bellapukonda
+- **StudentId:** 700772385
+- **Course:** CS5760 Natural Language Processing
 
 ## Overview
 
