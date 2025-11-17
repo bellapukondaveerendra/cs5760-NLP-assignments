@@ -1,0 +1,97 @@
+Part I. Short Answer
+1. RNN Families & Use-Cases
+a. Map tasks to RNN I/O patterns:
+
+Next-word prediction: Many-to-many aligned - each input word produces a prediction for the next word simultaneously across the sequence.
+Sentiment of a sentence: Many-to-one - the entire sequence is processed to produce a single sentiment classification at the end.
+NER (Named Entity Recognition): Many-to-many aligned - each input token gets a label (person, location, organization, etc.) at the corresponding position.
+Machine translation: Many-to-many unaligned (seq2seq) - input and output sequences have different lengths and alignments (e.g., English sentence → French sentence of different length).
+
+b.  Unrolling over time for BPTT and weight sharing:
+Unrolling reveals the temporal dependencies as a computational graph, allowing backpropagation through time (BPTT) to compute gradients across timesteps. 
+Weight sharing means the same RNN parameters are reused at each timestep, enabling the network to learn patterns that work across any position in the sequence while keeping the model size constant regardless of sequence length.
+
+
+c. Weight sharing - Advantage & Limitation:
+Advantage: Parameter efficiency and generalization - the model learns position-independent patterns and can handle variable-length sequences without architectural changes.
+Limitation: Difficulty capturing position-specific patterns - the same weights at all timesteps make it harder to learn that certain patterns are more important at specific positions (e.g., sentence beginnings vs. endings).
+
+2. Vanishing Gradients & Remedies
+
+a. Vanishing gradient problem:
+During backpropagation through time, gradients are multiplied by the recurrent weight matrix at each timestep. When these repeated multiplications involve values less than 1, gradients exponentially decay as they propagate backward through long sequences. This makes it extremely difficult for the network to learn dependencies between distant timesteps, as the error signal becomes negligibly small.
+
+
+b.Two architectural solutions:
+
+LSTM (Long Short-Term Memory): Uses gated memory cells with additive updates to the cell state, creating "highways" for gradient flow that bypass the multiplicative recurrence.
+GRU (Gated Recurrent Unit): Simplified gating mechanism with reset and update gates that controls information flow and provides more direct gradient paths.
+
+c. Training technique:
+Gradient clipping - Cap gradient norms to a maximum threshold during training. When gradients exceed this threshold, they're scaled down proportionally. This prevents exploding gradients while allowing the network to still learn, though it doesn't fundamentally solve vanishing gradients.
+3. LSTM Gates & Cell State
+a. Gate roles:
+
+Forget gate (sigmoid): Controls what information to discard from the cell state; outputs values in [0,1] where 0 = completely forget, 1 = completely retain.
+Input gate (sigmoid): Controls what new information to add to the cell state; determines how much of the candidate cell state to incorporate.
+Output gate (sigmoid): Controls what information from the cell state to expose as the hidden state output; filters the cell state through tanh then gates it.
+
+b.
+ "Linear path" for gradients:
+The cell state updates additively (c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t) rather than multiplicatively. 
+This additive connection creates a relatively unobstructed path for gradients to flow backward through time, similar to residual connections, allowing the network to learn long-range dependencies.
+
+
+c. "What to remember" vs. "what to expose":
+
+Remember (cell state): The internal memory can store raw information over long periods, protected by the forget gate.
+Expose (hidden state): The output gate filters what's shown externally, allowing the LSTM to keep information in memory without necessarily passing it to the next layer, enabling more selective information routing.
+
+4. Self-Attention
+a. Q, K, V definitions:
+
+Query (Q): Represents "what I'm looking for" - what the current position wants to attend to
+Key (K): Represents "what I offer" - what each position advertises about its content
+Value (V): Represents "what I actually contain" - the actual information to be retrieved from each position
+
+b.
+ Dot-product attention formula:
+Attention(Q,K,V) = softmax(QK^T / √d_k)V
+
+c. Why divide by √d_k:
+As dimensionality d_k increases, dot products grow in magnitude (their variance scales with d_k), pushing softmax into regions with extremely small gradients. Dividing by √d_k keeps the dot products in a reasonable range, ensuring the softmax has well-behaved gradients and prevents saturation.
+
+
+5.  Multi-Head Attention & Residual Connections
+
+a. Why multi-head attention:
+Different heads can learn to attend to different types of relationships simultaneously (e.g., syntactic vs. semantic, local vs. global patterns). This provides richer representational capacity than single-head attention, allowing the model to capture multiple aspects of token relationships in parallel.
+b.
+ Add & Norm purpose:
+
+Residual connection (Add): Enables gradient flow directly through the network, mitigating vanishing gradients and allowing very deep architectures
+LayerNorm: Stabilizes training by normalizing activations, reducing internal covariate shift and allowing higher learning rates
+
+c. Example linguistic relations for different heads:
+
+Head 1: Subject-verb agreement (syntactic dependency)
+Head 2: Coreference resolution (which pronouns refer to which entities)
+
+6. Encoder-Decoder with Masked Attention
+
+a. Masked self-attention in decoder:
+Masking prevents the decoder from attending to future positions during training. Without masking, the model would simply "cheat" by looking at the target sequence it's supposed to predict, making training trivial but inference impossible. 
+The mask ensures the model only uses information available up to the current position.
+
+b.
+ Encoder self-attention vs. encoder-decoder cross-attention:
+
+Encoder self-attention: Tokens attend to all other tokens in the source sequence (bidirectional)
+Encoder-decoder cross-attention: Decoder queries attend to encoder keys/values, allowing the decoder to access relevant source information when generating each target token
+
+c. Autoregressive generation step-by-step:
+At each step: (1) Feed all previously generated tokens into the decoder, 
+(2) The decoder attends to encoder outputs and its own previous outputs (with causal masking), 
+(3) The final position's output is projected to vocabulary logits, 
+(4) Sample or take argmax to select next token, 
+(5) Append to sequence and repeat until EOS token is generated.
